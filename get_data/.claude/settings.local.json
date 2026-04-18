@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tasklist)",
+      "Bash(taskkill /F /IM influxd.exe)",
+      "Bash(taskkill //F //IM influxd.exe)"
+    ]
+  }
+}
