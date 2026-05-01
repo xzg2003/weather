@@ -1,11 +1,8 @@
+# 将秒级数据合成分钟数据
 from __future__ import annotations
-
-import math
-
 import pandas as pd
 from query_data import query_time_range
 from ultils import *
-
 MISSING_VALUE = -100.0
 MIN_VALID_WIND_POINTS_2MIN = 30
 MIN_VALID_WIND_POINTS_10MIN = 150

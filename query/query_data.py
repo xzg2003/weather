@@ -7,8 +7,11 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 # 使用你的配置
-INFLUXDB_URL = "http://localhost:8086"
-INFLUXDB_TOKEN = "ln7NNOLrHk8y8w0KjE3nzR_qEXQBLANoZJMFPdMxsznISkpR1hOZt_CaZ0juIYU7Fwjft34NrO7061koydqolg=="
+#INFLUXDB_URL = "http://localhost:8086"
+#INFLUXDB_TOKEN = "ln7NNOLrHk8y8w0KjE3nzR_qEXQBLANoZJMFPdMxsznISkpR1hOZt_CaZ0juIYU7Fwjft34NrO7061koydqolg=="
+#INFLUXDB_ORG = "USTC"
+INFLUXDB_URL = "http://47.114.121.245:8086"
+INFLUXDB_TOKEN = "gYOZtC9oKJjoHkjIKMVxbeOuSoX2dsTfGvTKtaERmVN7b3FcecbqWAzJEyLb_uNSzRhFqpas9YcGzvgmajTjIA=="
 INFLUXDB_ORG = "USTC"
 
 def query_time_range(start=None, end=None, minutes=None,  verbose=False, \
@@ -17,8 +20,8 @@ def query_time_range(start=None, end=None, minutes=None,  verbose=False, \
     查询指定时间范围的数据，精确到分钟
 
     参数:
-        start: 开始时间，字符串格式 'YYYY-MM-DD HH:MM' 或 datetime 对象（本地时间）
-        end:   结束时间，字符串格式 'YYYY-MM-DD HH:MM' 或 datetime 对象（本地时间），默认为当前时间
+        start: 开始时间，字符串格式 'YYYY-MM-DD HH:MM:SS' 或 datetime 对象（本地时间）
+        end:   结束时间，字符串格式 'YYYY-MM-DD HH:MM:SS' 或 datetime 对象（本地时间），默认为当前时间
         minutes: 若不指定 start/end，则查询最近多少分钟的数据
         limit: 限制返回的记录数
         verbose: 是否打印详细信息
@@ -159,7 +162,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("气象数据查询")
     print("=" * 60)
-    print("时间格式: YYYY-MM-DD HH:MM（例如 2025-01-01 08:00）")
+    print("时间格式: YYYY-MM-DD HH:MM:SS（例如 2025-01-01 08:00:00）")
     print("直接回车跳过表示使用当前时间\n")
 
     start_input = input("请输入开始时间: ").strip()

@@ -12,7 +12,7 @@ from ultils import *
 INFLUXDB_URL = "http://localhost:8086"
 INFLUXDB_TOKEN = "ln7NNOLrHk8y8w0KjE3nzR_qEXQBLANoZJMFPdMxsznISkpR1hOZt_CaZ0juIYU7Fwjft34NrO7061koydqolg=="
 INFLUXDB_ORG = "USTC"
-INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "weather_1min")
+INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "weather_1h")
 MISSING_VALUE = -100.0
 
 # 配置日志

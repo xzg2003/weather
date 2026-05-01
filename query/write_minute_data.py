@@ -1,3 +1,4 @@
+# 将分钟数据写入分钟数据库
 from __future__ import annotations
 
 import logging
@@ -12,10 +13,15 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from ultils import *
 from merge_minute_data import merge_minute_data
 
-INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
+#INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
+#INFLUXDB_TOKEN = os.getenv(
+#    "INFLUXDB_TOKEN",
+#    "ln7NNOLrHk8y8w0KjE3nzR_qEXQBLANoZJMFPdMxsznISkpR1hOZt_CaZ0juIYU7Fwjft34NrO7061koydqolg==",
+#)
+INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://47.114.121.245:8086")
 INFLUXDB_TOKEN = os.getenv(
     "INFLUXDB_TOKEN",
-    "ln7NNOLrHk8y8w0KjE3nzR_qEXQBLANoZJMFPdMxsznISkpR1hOZt_CaZ0juIYU7Fwjft34NrO7061koydqolg==",
+    "gYOZtC9oKJjoHkjIKMVxbeOuSoX2dsTfGvTKtaERmVN7b3FcecbqWAzJEyLb_uNSzRhFqpas9YcGzvgmajTjIA==",
 )
 INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "USTC")
 INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "weather_1m")
