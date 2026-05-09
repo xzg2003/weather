@@ -1,0 +1,195 @@
+# -*- coding: utf-8 -*-
+import os
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from influxdb_client import InfluxDBClient
+from collections import defaultdict
+from zoneinfo import ZoneInfo
+
+matplotlib.rcParams["font.sans-serif"] = ["SimHei"]
+matplotlib.rcParams["axes.unicode_minus"] = False
+
+BJ_TZ = ZoneInfo("Asia/Shanghai")
+
+def _to_float_array(s: pd.Series) -> np.ndarray:
+    return pd.to_numeric(s, errors="coerce").astype(float).to_numpy()
+
+def _safe_savefig(fig, output_path: str, dpi: int = 150):
+    try:
+        fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    except BaseException as exc:
+        if exc.__class__.__name__ == "Done":
+            fig.savefig(output_path, dpi=dpi)
+        else:
+            raise
+
+def _apply_smart_time_axis(ax, start_time: str, end_time: str, tz=BJ_TZ):
+    start_local = pd.to_datetime(start_time, utc=True).tz_convert(tz)
+    end_local = pd.to_datetime(end_time, utc=True).tz_convert(tz)
+
+    span_seconds = (end_local - start_local).total_seconds()
+    span_minutes = span_seconds / 60.0
+    span_hours = span_minutes / 60.0
+    span_days = span_hours / 24.0
+
+    if span_minutes <= 60:
+        locator = mdates.MinuteLocator(interval=5, tz=tz)
+        formatter = mdates.DateFormatter("%H:%M", tz=tz)
+        rotation = 0
+    elif span_hours <= 6:
+        locator = mdates.MinuteLocator(interval=15, tz=tz)
+        formatter = mdates.DateFormatter("%H:%M", tz=tz)
+        rotation = 0
+    elif span_hours <= 24:
+        locator = mdates.HourLocator(interval=1, tz=tz)
+        formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
+        rotation = 30
+    elif span_days <= 7:
+        locator = mdates.HourLocator(interval=6, tz=tz)
+        formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
+        rotation = 30
+    elif span_days <= 31:
+        locator = mdates.DayLocator(interval=1, tz=tz)
+        formatter = mdates.DateFormatter("%m-%d", tz=tz)
+        rotation = 30
+    else:
+        locator = mdates.WeekdayLocator(interval=1, tz=tz)
+        formatter = mdates.DateFormatter("%Y-%m-%d", tz=tz)
+        rotation = 30
+
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(formatter)
+    ax.locator_params(axis="x", nbins=10)
+    plt.xticks(rotation=rotation)
+
+def generate_rain_chart(
+    start_time: str,
+    end_time: str,
+    output_path: str = "static/rain.png",
+    db_level: str = "minute",
+):
+    url = "http://47.114.121.245:8086"
+    token = "gYOZtC9oKJjoHkjIKMVxbeOuSoX2dsTfGvTKtaERmVN7b3FcecbqWAzJEyLb_uNSzRhFqpas9YcGzvgmajTjIA=="
+    org = "USTC"
+
+    if db_level == "hour":
+        bucket = "weather_1h"
+        measurement = "weather"  # ✅ 修正：小时库 measurement
+        field = "hourly_rainfall"
+        title = "小时雨量 / 区间累计（北京时间 UTC+8）"
+        y_label = "雨量 (mm)"
+        bar_label = "小时雨量"
+        line_label = "区间累计"
+    else:
+        bucket = "weather_1m"
+        measurement = "weather"
+        field = "instantaneous_rainfall"
+        title = "分雨 / 时次累计（北京时间 UTC+8）"
+        y_label = "分雨 (mm)"
+        bar_label = "分雨"
+        line_label = "时次累计"
+
+    client = InfluxDBClient(url=url, token=token, org=org)
+    query_api = client.query_api()
+
+    query = f'''
+from(bucket: "{bucket}")
+  |> range(start: {start_time}, stop: {end_time})
+  |> filter(fn: (r) => r._measurement == "{measurement}")
+  |> filter(fn: (r) => r._field == "{field}")
+'''
+    tables = query_api.query(query, org=org)
+
+    data_map = defaultdict(dict)
+    for table in tables:
+        for record in table.records:
+            ts = record.get_time()
+            data_map[ts][field] = record.get_value()
+
+    if len(data_map) == 0:
+        client.close()
+        raise ValueError("No data returned. 数据库中没有该区间的降雨数据！")
+
+    rows = []
+    for ts in sorted(data_map.keys()):
+        rows.append({"time": ts, field: data_map[ts].get(field)})
+
+    df = pd.DataFrame(rows)
+    df["time"] = pd.to_datetime(df["time"], utc=True, errors="coerce")
+    df[field] = pd.to_numeric(df[field], errors="coerce")
+    df = df.dropna(subset=["time"]).sort_values("time").reset_index(drop=True)
+
+    times_local = df["time"].dt.tz_convert(BJ_TZ)
+
+    rain = _to_float_array(df[field]).copy()
+    rain = np.where(np.isclose(rain, -100.0, atol=1e-6), np.nan, rain)
+    rain = np.where(np.isfinite(rain) & (rain < 0), 0.0, rain)
+
+    cum = np.nancumsum(np.where(np.isfinite(rain), rain, 0.0))
+
+    fig, ax = plt.subplots(figsize=(14, 3.2))
+
+    start_local = pd.to_datetime(start_time, utc=True).tz_convert(BJ_TZ)
+    end_local = pd.to_datetime(end_time, utc=True).tz_convert(BJ_TZ)
+    ax.set_xlim(start_local, end_local)
+
+    if len(times_local) >= 2:
+        dx = (mdates.date2num(times_local.iloc[1]) - mdates.date2num(times_local.iloc[0]))
+        width = max(dx * 0.8, 0.0005)
+    else:
+        width = 0.01
+
+    ax.bar(times_local, np.nan_to_num(rain, nan=0.0), width=width, color="#1E88E5", alpha=0.85, label=bar_label)
+
+    max_rain = float(np.nanmax(rain)) if np.any(np.isfinite(rain)) else 0.0
+    ax.set_ylim(0, max(1.0, max_rain * 1.2))
+
+    ax2 = ax.twinx()
+    ax2.plot(times_local, cum, color="#263238", lw=1.6, label=line_label)
+    max_cum = float(np.nanmax(cum)) if len(cum) else 0.0
+    ax2.set_ylim(0, max(1.0, max_cum * 1.2))
+
+    ax.set_ylabel(y_label, fontsize=11)
+    ax2.set_ylabel("累计 (mm)", fontsize=11)
+    ax.set_title(title, fontsize=12)
+    ax.grid(True, linestyle="--", alpha=0.3)
+
+    lines, labels = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax.legend(lines + lines2, labels + labels2, loc="upper left", fontsize=10)
+
+    fig.canvas.draw()
+    min_px = 65
+    last_x_px = None
+    for i in range(len(times_local)):
+        if not (np.isfinite(rain[i]) and rain[i] > 0):
+            continue
+        xdata = mdates.date2num(times_local.iloc[i].to_pydatetime())
+        x_px = ax.transData.transform((xdata, float(rain[i])))[0]
+        if last_x_px is None or (x_px - last_x_px) >= min_px:
+            ax.annotate(
+                f"{rain[i]:.1f}",
+                xy=(times_local.iloc[i], float(rain[i])),
+                xytext=(0, 6),
+                textcoords="offset points",
+                ha="center",
+                fontsize=7,
+                color="#1E88E5",
+                clip_on=True,
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.6),
+            )
+            last_x_px = x_px
+
+    # ✅ 动态 x 轴刻度（对 ax 生效）
+    _apply_smart_time_axis(ax, start_time, end_time, tz=BJ_TZ)
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    plt.tight_layout()
+    _safe_savefig(fig, output_path, dpi=150)
+    plt.close(fig)
+    client.close()
+    return output_path
