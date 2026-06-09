@@ -1,20 +1,12 @@
-import sys
-sys.path.append('.')
 from flask import Flask, render_template, request, send_file, jsonify
 from datetime import datetime, timezone, timedelta
-from draw_pic.draw import generate_windbarb
-from draw_pic.draw_temp_dewpoint import generate_temp_dewpoint
-from draw_pic.draw_humidity import generate_humidity_chart
-from draw_pic.draw_pressure import generate_pressure_chart
-from draw_pic.draw_rain import generate_rain_chart
+from draw import generate_windbarb
+from draw_temp_dewpoint import generate_temp_dewpoint
+from draw_humidity import generate_humidity_chart
+from draw_pressure import generate_pressure_chart
+from draw_rain import generate_rain_chart
 import os
 import traceback
-import csv
-
-try:
-    from query.query_data import query_time_range
-except Exception:
-    query_time_range = None
 
 app = Flask(__name__)
 LOCAL_TZ = timezone(timedelta(hours=8))  # 按需修改
@@ -64,87 +56,6 @@ def _validate_and_convert():
 @app.route("/")
 def home():
     return render_template("index.html")
-
-def _safe_float(value):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-def _latest_from_csv(csv_path: str):
-    if not os.path.exists(csv_path):
-        return None
-
-    with open(csv_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-        if not rows:
-            return None
-        return rows[-1]
-
-def _normalize_realtime_payload(raw: dict) -> dict:
-    """
-    将不同来源（Influx/CSV）的字段统一为前端看板所需键名。
-    """
-    raw = raw or {}
-    return {
-        "time": raw.get("time"),
-        "temperature": _safe_float(raw.get("temperature")),
-        "humidity": _safe_float(raw.get("humidity")),
-        "pressure": _safe_float(raw.get("pressure")),
-        "wind_speed": _safe_float(raw.get("wind_speed", raw.get("instant_speed"))),
-        "avg_speed_2m": _safe_float(raw.get("avg_speed_2m", raw.get("wind_speed_2min"))),
-        "avg_speed_10m": _safe_float(raw.get("avg_speed_10m", raw.get("wind_speed_10min"))),
-        "wind_direction": raw.get("wind_direction", raw.get("instant_direction")),
-        "wind_angle": _safe_float(raw.get("wind_angle", raw.get("instant_angle"))),
-        "wind_level": _safe_float(raw.get("wind_level", raw.get("instant_level"))),
-        "max_wind_speed": _safe_float(raw.get("max_wind", raw.get("max_speed"))),
-        "max_wind_level": _safe_float(raw.get("max_wind_level", raw.get("max_level"))),
-        "max_wind_direction": raw.get("max_wind_direction", raw.get("max_direction")),
-        "max_wind_angle": _safe_float(raw.get("max_wind_angle", raw.get("max_angle"))),
-        "instantaneous_rainfall": _safe_float(raw.get("instantaneous_rainfall")),
-        "current_hour_rainfall": _safe_float(raw.get("current_hour_rainfall")),
-    }
-
-@app.route("/api/realtime")
-def api_realtime():
-    minutes = request.args.get("minutes", "5")
-    try:
-        minutes = int(minutes)
-        if minutes <= 0:
-            raise ValueError("minutes must be positive")
-    except ValueError:
-        return jsonify({"error": "minutes must be a positive integer"}), 400
-
-    data = None
-    source = "csv"
-
-    # 优先从 InfluxDB 查询最近数据；失败时回退到本地 CSV。
-    if query_time_range is not None:
-        try:
-            df = query_time_range(minutes=minutes, bucket_name="weather_1m", method="weather")
-            #print(df[['max_angle','max_level']])
-            if df is not None and not df.empty:
-                latest = df.iloc[0].to_dict()
-                data = _normalize_realtime_payload(latest)
-                #print(data['max_wind_angle'])
-                #source = "influxdb"
-        except Exception:
-            pass
-
-    if data is None:
-        latest = _latest_from_csv("queried_weather_data.csv")
-        if latest is None:
-            return jsonify({"error": "no realtime data available"}), 404
-        data = _normalize_realtime_payload(latest)
-        
-
-    return jsonify({
-        "ok": True,
-        #"source": source,
-        "server_time": datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S"),
-        "data": data
-    })
 
 @app.route("/windbarb")
 def windbarb():

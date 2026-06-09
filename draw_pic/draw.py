@@ -9,10 +9,9 @@ import matplotlib.dates as mdates
 from influxdb_client import InfluxDBClient
 from collections import defaultdict
 from zoneinfo import ZoneInfo
-
-matplotlib.rcParams['font.sans-serif'] = ['SimHei']
-matplotlib.rcParams['axes.unicode_minus'] = False
-
+zh_font = matplotlib.font_manager.FontProperties(fname="Arial_Unicode_MS.ttf")
+#matplotlib.rcParams['font.sans-serif'] = ["Noto Sans CJK SC"]
+#matplotlib.rcParams['axes.unicode_minus'] = False
 
 def _to_float_array(s: pd.Series) -> np.ndarray:
     return pd.to_numeric(s, errors="coerce").astype(float).to_numpy()
@@ -98,7 +97,8 @@ from(bucket: "{bucket}")
 
     inst_s = _to_float_array(_pick_series(df, ["instant_speed"]))
     inst_d = _to_float_array(_pick_series(df, ["instant_angle"]))
-
+    max_s = _to_float_array(_pick_series(df, ["max_speed", "max_wind"]))
+    max_d = _to_float_array(_pick_series(df, ["max_angle"]))
     avg2m_s = _to_float_array(_pick_series(df, speed_2m_fields))
     avg2m_d = _to_float_array(_pick_series(df, angle_2m_fields))
     avg10m_s = _to_float_array(_pick_series(df, speed_10m_fields))
@@ -111,40 +111,66 @@ from(bucket: "{bucket}")
     ax.set_xlim(start_local, end_local)
 
     ax.plot(times_local, inst_s, color="gray", lw=1.2, label="瞬时风", zorder=2)
+    ax.plot(times_local, max_s, color="red", lw=1.2, label="极大风", zorder=2)
     ax.plot(times_local, avg2m_s, color="orange", lw=2.0, label="2min平均风", zorder=2)
     ax.plot(times_local, avg10m_s, color="green", lw=2.2, label="10min平均风", zorder=2)
 
     # ===== barbs：x 转 mdates 浮点；过滤 NaN/inf =====
+    # 中国气象标准：短划=2m/s, 长划=4m/s, 三角旗=20m/s
+    barb_inc = {'half': 2, 'full': 4, 'flag': 20}
     valid1 = np.isfinite(inst_s) & np.isfinite(inst_d) & (inst_s > 0) & times_local.notna().to_numpy()
-    x1 = mdates.date2num(times_local[valid1].dt.tz_localize(None).to_numpy())
+    x1 = np.asarray(mdates.date2num(times_local[valid1].to_numpy()), dtype=float)
     y1 = np.asarray(inst_s[valid1], dtype=float)
     u1 = np.asarray(inst_s[valid1] * np.sin(np.deg2rad(inst_d[valid1])), dtype=float)
     v1 = np.asarray(inst_s[valid1] * np.cos(np.deg2rad(inst_d[valid1])), dtype=float)
     m1 = np.isfinite(x1) & np.isfinite(y1) & np.isfinite(u1) & np.isfinite(v1)
     if np.any(m1):
-        ax.barbs(x1[m1], y1[m1], u1[m1], v1[m1], length=8, barbcolor="gray", linewidth=1, alpha=0.85, zorder=5)
+        # 每隔1个点画一次，减少拥挤
+        step = 2
+        ax.barbs(x1[m1][::step], y1[m1][::step], u1[m1][::step], v1[m1][::step],
+                 length=7, barbcolor="gray", linewidth=0.8, alpha=0.7, zorder=5,
+                 barb_increments=barb_inc)
 
     valid2 = np.isfinite(avg2m_s) & np.isfinite(avg2m_d) & (avg2m_s > 0) & times_local.notna().to_numpy()
-    x2 = mdates.date2num(times_local[valid2].dt.tz_localize(None).to_numpy())
+    x2 = np.asarray(mdates.date2num(times_local[valid2].to_numpy()), dtype=float)
     y2 = np.asarray(avg2m_s[valid2], dtype=float)
     u2 = np.asarray(avg2m_s[valid2] * np.sin(np.deg2rad(avg2m_d[valid2])), dtype=float)
     v2 = np.asarray(avg2m_s[valid2] * np.cos(np.deg2rad(avg2m_d[valid2])), dtype=float)
     m2 = np.isfinite(x2) & np.isfinite(y2) & np.isfinite(u2) & np.isfinite(v2)
     if np.any(m2):
-        ax.barbs(x2[m2], y2[m2], u2[m2], v2[m2], length=8, barbcolor="orange", linewidth=1, alpha=0.8, zorder=5)
+        step = 2
+        ax.barbs(x2[m2][::step], y2[m2][::step], u2[m2][::step], v2[m2][::step],
+                 length=7, barbcolor="orange", linewidth=0.8, alpha=0.7, zorder=5,
+                 barb_increments=barb_inc)
 
     valid3 = np.isfinite(avg10m_s) & np.isfinite(avg10m_d) & (avg10m_s > 0) & times_local.notna().to_numpy()
-    x3 = mdates.date2num(times_local[valid3].dt.tz_localize(None).to_numpy())
+    x3 = np.asarray(mdates.date2num(times_local[valid3].to_numpy()), dtype=float)
     y3 = np.asarray(avg10m_s[valid3], dtype=float)
     u3 = np.asarray(avg10m_s[valid3] * np.sin(np.deg2rad(avg10m_d[valid3])), dtype=float)
     v3 = np.asarray(avg10m_s[valid3] * np.cos(np.deg2rad(avg10m_d[valid3])), dtype=float)
     m3 = np.isfinite(x3) & np.isfinite(y3) & np.isfinite(u3) & np.isfinite(v3)
     if np.any(m3):
-        ax.barbs(x3[m3], y3[m3], u3[m3], v3[m3], length=8, barbcolor="green", linewidth=1, alpha=0.8, zorder=5)
+        step = 2
+        ax.barbs(x3[m3][::step], y3[m3][::step], u3[m3][::step], v3[m3][::step],
+                 length=7, barbcolor="green", linewidth=0.8, alpha=0.7, zorder=5,
+                 barb_increments=barb_inc)
 
-    ax.set_ylabel("风速 (m/s)", fontsize=11)
-    ax.set_title("风羽图（北京时间 UTC+8）", fontsize=12)
-    ax.legend(loc="upper left", fontsize=10)
+    # 极大风风羽（红色）
+    valid_max = np.isfinite(max_s) & np.isfinite(max_d) & (max_s > 0) & times_local.notna().to_numpy()
+    x_max = np.asarray(mdates.date2num(times_local[valid_max].to_numpy()), dtype=float)
+    y_max = np.asarray(max_s[valid_max], dtype=float)
+    u_max = np.asarray(max_s[valid_max] * np.sin(np.deg2rad(max_d[valid_max])), dtype=float)
+    v_max = np.asarray(max_s[valid_max] * np.cos(np.deg2rad(max_d[valid_max])), dtype=float)
+    m_max = np.isfinite(x_max) & np.isfinite(y_max) & np.isfinite(u_max) & np.isfinite(v_max)
+    if np.any(m_max):
+        step = 2
+        ax.barbs(x_max[m_max][::step], y_max[m_max][::step], u_max[m_max][::step], v_max[m_max][::step],
+                 length=7, barbcolor="red", linewidth=0.8, alpha=0.7, zorder=5,
+                 barb_increments=barb_inc)
+
+    ax.set_ylabel("风速 (m/s)", fontsize=11, fontproperties=zh_font)
+    ax.set_title("风羽图（北京时间 UTC+8）", fontsize=12, fontproperties=zh_font)
+    ax.legend(loc="upper left", fontsize=10, prop=zh_font)
     ax.grid(True, linestyle="--", alpha=0.25)
 
     # ===== x 轴刻度：根据区间长度动态调整，避免重叠 =====
@@ -186,7 +212,7 @@ from(bucket: "{bucket}")
 
     plt.xticks(rotation=rotation)
 
-    ymax = np.nanmax([np.nanmax(inst_s), np.nanmax(avg2m_s), np.nanmax(avg10m_s)])
+    ymax = np.nanmax([np.nanmax(inst_s), np.nanmax(avg2m_s), np.nanmax(avg10m_s), np.nanmax(max_s)])
     if np.isfinite(ymax) and ymax > 0:
         ax.set_ylim(0, ymax * 1.2)
     else:

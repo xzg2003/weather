@@ -9,9 +9,9 @@ import matplotlib.dates as mdates
 from influxdb_client import InfluxDBClient
 from collections import defaultdict
 from zoneinfo import ZoneInfo
-
-matplotlib.rcParams['font.sans-serif'] = ['SimHei']
-matplotlib.rcParams['axes.unicode_minus'] = False
+zh_font = matplotlib.font_manager.FontProperties(fname="Arial_Unicode_MS.ttf")
+#matplotlib.rcParams['font.sans-serif'] = ["Noto Sans CJK SC"]
+#matplotlib.rcParams['axes.unicode_minus'] = False
 
 BJ_TZ = ZoneInfo("Asia/Shanghai")
 
@@ -144,9 +144,9 @@ from(bucket: "{bucket}")
     else:
         ax.set_ylim(0, 100)
 
-    # ===== 方案1：按像素间隔防重叠标注 =====
+    # ===== 数据标注 =====
     fig.canvas.draw()
-    min_px = 60
+    min_px = 30
     last_x_px = None
     for i in range(len(times_local)):
         if not np.isfinite(humidity[i]):
@@ -156,20 +156,21 @@ from(bucket: "{bucket}")
         if last_x_px is None or (x_px - last_x_px) >= min_px:
             ax.annotate(
                 f"{humidity[i]:.1f}",
-                xy=(times_local.iloc[i], float(humidity[i])),
-                xytext=(0, 8),
+                xy=(mdates.date2num(times_local.iloc[i].to_pydatetime()), float(humidity[i])),
+                xycoords=ax.transData,
+                xytext=(0, 6),
                 textcoords="offset points",
-                ha="center",
-                fontsize=7,
+                ha="center", va="bottom",
+                fontsize=8,
                 color="#1E88E5",
                 clip_on=True,
-                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.6),
+                bbox=dict(boxstyle="round,pad=0.1", fc="white", ec="none", alpha=0.6),
             )
             last_x_px = x_px
 
-    ax.set_ylabel("湿度 (%)", fontsize=11)
-    ax.set_title("湿度（北京时间 UTC+8）", fontsize=12)
-    ax.legend(loc="upper left", fontsize=10)
+    ax.set_ylabel("湿度 (%)", fontsize=11, fontproperties=zh_font)
+    ax.set_title("湿度（北京时间 UTC+8）", fontsize=12, fontproperties=zh_font)
+    ax.legend(loc="upper left", fontsize=10, prop=zh_font)
     ax.grid(True, linestyle="--", alpha=0.3)
 
     # ✅ 动态 x 轴刻度
