@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 zh_font = matplotlib.font_manager.FontProperties(fname="Arial_Unicode_MS.ttf")
 #matplotlib.rcParams['font.sans-serif'] = ["Noto Sans CJK SC"]
 #matplotlib.rcParams['axes.unicode_minus'] = False
+PLOT_LAYOUT = {"left": 0.075, "right": 0.94, "top": 0.86, "bottom": 0.22}
 
 def _to_float_array(s: pd.Series) -> np.ndarray:
     return pd.to_numeric(s, errors="coerce").astype(float).to_numpy()
@@ -26,12 +27,28 @@ def _pick_series(df: pd.DataFrame, candidates: list[str]) -> pd.Series:
 
 def _safe_savefig(fig, output_path: str, dpi: int = 150):
     try:
-        fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=dpi)
     except BaseException as exc:
         if exc.__class__.__name__ == "Done":
             fig.savefig(output_path, dpi=dpi)
         else:
             raise
+
+
+def _finite_max(*arrays: np.ndarray) -> float:
+    finite_values = []
+    for arr in arrays:
+        arr = np.asarray(arr, dtype=float)
+        finite = arr[np.isfinite(arr)]
+        if finite.size:
+            finite_values.append(float(np.nanmax(finite)))
+    return max(finite_values) if finite_values else np.nan
+
+
+def _set_padded_xlim(ax, start_local, end_local):
+    span_seconds = max((end_local - start_local).total_seconds(), 60.0)
+    x_pad = pd.Timedelta(seconds=max(span_seconds * 0.04, 30.0))
+    ax.set_xlim(start_local - x_pad, end_local + x_pad)
 
 
 def generate_windbarb(
@@ -108,7 +125,7 @@ from(bucket: "{bucket}")
 
     start_local = pd.to_datetime(start_time, utc=True).tz_convert(tz)
     end_local = pd.to_datetime(end_time, utc=True).tz_convert(tz)
-    ax.set_xlim(start_local, end_local)
+    _set_padded_xlim(ax, start_local, end_local)
 
     ax.plot(times_local, inst_s, color="gray", lw=1.2, label="瞬时风", zorder=2)
     ax.plot(times_local, max_s, color="red", lw=1.2, label="极大风", zorder=2)
@@ -118,6 +135,7 @@ from(bucket: "{bucket}")
     # ===== barbs：x 转 mdates 浮点；过滤 NaN/inf =====
     # 中国气象标准：短划=2m/s, 长划=4m/s, 三角旗=20m/s
     barb_inc = {'half': 2, 'full': 4, 'flag': 20}
+    barb_step = 1 if db_level == "hour" else 2
     valid1 = np.isfinite(inst_s) & np.isfinite(inst_d) & (inst_s > 0) & times_local.notna().to_numpy()
     x1 = np.asarray(mdates.date2num(times_local[valid1].to_numpy()), dtype=float)
     y1 = np.asarray(inst_s[valid1], dtype=float)
@@ -125,9 +143,7 @@ from(bucket: "{bucket}")
     v1 = np.asarray(inst_s[valid1] * np.cos(np.deg2rad(inst_d[valid1])), dtype=float)
     m1 = np.isfinite(x1) & np.isfinite(y1) & np.isfinite(u1) & np.isfinite(v1)
     if np.any(m1):
-        # 每隔1个点画一次，减少拥挤
-        step = 2
-        ax.barbs(x1[m1][::step], y1[m1][::step], u1[m1][::step], v1[m1][::step],
+        ax.barbs(x1[m1][::barb_step], y1[m1][::barb_step], u1[m1][::barb_step], v1[m1][::barb_step],
                  length=7, barbcolor="gray", linewidth=0.8, alpha=0.7, zorder=5,
                  barb_increments=barb_inc)
 
@@ -138,8 +154,7 @@ from(bucket: "{bucket}")
     v2 = np.asarray(avg2m_s[valid2] * np.cos(np.deg2rad(avg2m_d[valid2])), dtype=float)
     m2 = np.isfinite(x2) & np.isfinite(y2) & np.isfinite(u2) & np.isfinite(v2)
     if np.any(m2):
-        step = 2
-        ax.barbs(x2[m2][::step], y2[m2][::step], u2[m2][::step], v2[m2][::step],
+        ax.barbs(x2[m2][::barb_step], y2[m2][::barb_step], u2[m2][::barb_step], v2[m2][::barb_step],
                  length=7, barbcolor="orange", linewidth=0.8, alpha=0.7, zorder=5,
                  barb_increments=barb_inc)
 
@@ -150,8 +165,7 @@ from(bucket: "{bucket}")
     v3 = np.asarray(avg10m_s[valid3] * np.cos(np.deg2rad(avg10m_d[valid3])), dtype=float)
     m3 = np.isfinite(x3) & np.isfinite(y3) & np.isfinite(u3) & np.isfinite(v3)
     if np.any(m3):
-        step = 2
-        ax.barbs(x3[m3][::step], y3[m3][::step], u3[m3][::step], v3[m3][::step],
+        ax.barbs(x3[m3][::barb_step], y3[m3][::barb_step], u3[m3][::barb_step], v3[m3][::barb_step],
                  length=7, barbcolor="green", linewidth=0.8, alpha=0.7, zorder=5,
                  barb_increments=barb_inc)
 
@@ -163,8 +177,7 @@ from(bucket: "{bucket}")
     v_max = np.asarray(max_s[valid_max] * np.cos(np.deg2rad(max_d[valid_max])), dtype=float)
     m_max = np.isfinite(x_max) & np.isfinite(y_max) & np.isfinite(u_max) & np.isfinite(v_max)
     if np.any(m_max):
-        step = 2
-        ax.barbs(x_max[m_max][::step], y_max[m_max][::step], u_max[m_max][::step], v_max[m_max][::step],
+        ax.barbs(x_max[m_max][::barb_step], y_max[m_max][::barb_step], u_max[m_max][::barb_step], v_max[m_max][::barb_step],
                  length=7, barbcolor="red", linewidth=0.8, alpha=0.7, zorder=5,
                  barb_increments=barb_inc)
 
@@ -184,17 +197,21 @@ from(bucket: "{bucket}")
         formatter = mdates.DateFormatter("%H:%M", tz=tz)
         rotation = 0
     elif span_hours <= 6:   # 1~6小时
-        locator = mdates.MinuteLocator(interval=15, tz=tz)
+        locator = mdates.HourLocator(interval=1, tz=tz)
         formatter = mdates.DateFormatter("%H:%M", tz=tz)
         rotation = 0
-    elif span_hours <= 24:  # 6~24小时
-        locator = mdates.HourLocator(interval=1, tz=tz)
+    elif span_hours <= 12:  # 6~12小时
+        locator = mdates.HourLocator(interval=2, tz=tz)
         formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
-        rotation = 30
+        rotation = 35
+    elif span_hours <= 24:  # 12~24小时
+        locator = mdates.HourLocator(interval=4, tz=tz)
+        formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
+        rotation = 35
     elif span_days <= 7:    # 1~7天
-        locator = mdates.HourLocator(interval=6, tz=tz)
+        locator = mdates.HourLocator(interval=8, tz=tz)
         formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
-        rotation = 30
+        rotation = 35
     elif span_days <= 31:   # 1~31天
         locator = mdates.DayLocator(interval=1, tz=tz)
         formatter = mdates.DateFormatter("%m-%d", tz=tz)
@@ -212,14 +229,16 @@ from(bucket: "{bucket}")
 
     plt.xticks(rotation=rotation)
 
-    ymax = np.nanmax([np.nanmax(inst_s), np.nanmax(avg2m_s), np.nanmax(avg10m_s), np.nanmax(max_s)])
+    ymax = _finite_max(inst_s, avg2m_s, avg10m_s, max_s)
     if np.isfinite(ymax) and ymax > 0:
-        ax.set_ylim(0, ymax * 1.2)
+        lower_pad = max(ymax * 0.12, 0.8)
+        upper_pad = max(ymax * 0.35, 1.5)
+        ax.set_ylim(-lower_pad, ymax + upper_pad)
     else:
         ax.set_ylim(0, 1)
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.tight_layout()
+    fig.subplots_adjust(**PLOT_LAYOUT)
     _safe_savefig(fig, output_path, dpi=150)
     plt.close(fig)
     client.close()

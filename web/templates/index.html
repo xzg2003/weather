@@ -5,51 +5,164 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>气象监测系统</title>
     <style>
+        :root {
+            --bg: #eef7fb;
+            --panel: rgba(255, 255, 255, 0.86);
+            --panel-strong: #ffffff;
+            --line: rgba(88, 148, 178, 0.22);
+            --text: #173042;
+            --muted: #63798a;
+            --primary: #0ea5e9;
+            --primary-strong: #0284c7;
+            --accent: #14b8a6;
+            --danger: #f43f5e;
+            --shadow: 0 18px 45px rgba(38, 88, 118, 0.16);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
+            position: relative;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
+            color: var(--text);
             display: flex;
+            flex-direction: column;
             height: 100vh;
+            background:
+                radial-gradient(circle at 12% 12%, rgba(250, 204, 21, 0.3), transparent 12%),
+                linear-gradient(90deg, rgba(14, 165, 233, 0.06) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(14, 165, 233, 0.06) 1px, transparent 1px),
+                linear-gradient(180deg, #f3fbff 0%, #e8f7ff 48%, #f8fcff 100%);
+            background-size: auto, 34px 34px, 34px 34px, auto;
+            overflow: hidden;
         }
 
-        .sidebar {
-            width: 250px;
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 20px;
-            overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.34;
+            background:
+                repeating-radial-gradient(ellipse at 86% 18%, transparent 0 34px, rgba(14, 165, 233, 0.12) 35px 36px, transparent 37px 70px),
+                repeating-radial-gradient(ellipse at 8% 92%, transparent 0 42px, rgba(20, 184, 166, 0.1) 43px 44px, transparent 45px 86px);
+            mask-image: linear-gradient(120deg, transparent 0%, #000 16%, #000 82%, transparent 100%);
         }
 
-        .sidebar h2 {
-            font-size: 18px;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
+        body::after {
+            content: "";
+            position: fixed;
+            left: -12%;
+            right: -12%;
+            top: 118px;
+            height: 120px;
+            pointer-events: none;
+            opacity: 0.18;
+            background:
+                radial-gradient(ellipse at 16% 72%, rgba(255,255,255,0.95) 0 34px, transparent 35px),
+                radial-gradient(ellipse at 30% 58%, rgba(255,255,255,0.86) 0 46px, transparent 47px),
+                radial-gradient(ellipse at 46% 74%, rgba(255,255,255,0.74) 0 38px, transparent 39px);
+            filter: blur(0.2px);
+            animation: driftClouds 18s linear infinite;
+        }
+
+        .topbar {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            color: var(--text);
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--line);
+            background:
+                radial-gradient(circle at 58px 28px, rgba(250, 204, 21, 0.32) 0 24px, transparent 25px),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(232, 247, 255, 0.76));
+            backdrop-filter: blur(18px);
+            box-shadow: 0 12px 34px rgba(64, 124, 154, 0.1);
+            overflow: hidden;
+        }
+
+        .topbar::before {
+            content: "";
+            position: absolute;
+            right: 260px;
+            top: 18px;
+            width: 220px;
+            height: 54px;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse at 18% 72%, rgba(255,255,255,0.95) 0 20px, transparent 21px),
+                radial-gradient(ellipse at 42% 54%, rgba(255,255,255,0.88) 0 27px, transparent 28px),
+                radial-gradient(ellipse at 68% 70%, rgba(255,255,255,0.78) 0 21px, transparent 22px);
+            opacity: 0.88;
+        }
+
+        .topbar::after {
+            content: "";
+            position: absolute;
+            left: 24px;
+            right: 24px;
+            bottom: -1px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+            opacity: 0.65;
+        }
+
+        .brand {
+            min-width: 0;
+        }
+
+        .brand h1 {
+            font-size: 24px;
+            letter-spacing: 0;
+        }
+
+        .topnav {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.58);
         }
 
         .nav-item {
-            padding: 12px 15px;
-            margin-bottom: 10px;
+            position: relative;
+            padding: 10px 15px;
             cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.3s;
+            border-radius: 8px;
+            transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease, color 180ms ease;
             display: flex;
             align-items: center;
             gap: 10px;
+            border: 1px solid transparent;
         }
 
         .nav-item:hover {
-            background: #3498db;
-            transform: translateX(5px);
+            transform: translateY(-1px);
+            background: rgba(14, 165, 233, 0.09);
+            border-color: rgba(14, 165, 233, 0.18);
         }
 
         .nav-item.active {
-            background: #3498db;
-            font-weight: bold;
-            border-left: 4px solid #e74c3c;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(20, 184, 166, 0.11));
+            border-color: rgba(14, 165, 233, 0.28);
+            box-shadow: 0 10px 28px rgba(14, 165, 233, 0.14);
+            color: #075985;
+            font-weight: 700;
+        }
+
+        .nav-item.active::before {
+            content: "";
+            height: 3px;
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            bottom: 3px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
         }
 
         .main-container {
@@ -59,40 +172,76 @@
             overflow: hidden;
         }
 
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        header h1 { font-size: 24px; margin-bottom: 5px; }
-        header p { font-size: 14px; opacity: 0.9; }
-
         .content {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 22px;
         }
 
         .dashboard-section {
-            background: white;
+            position: relative;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.9), rgba(246, 252, 255, 0.86)),
+                linear-gradient(90deg, rgba(14, 165, 233, 0.025), transparent 34%);
+            border: 1px solid var(--line);
             border-radius: 8px;
-            padding: 20px;
+            padding: 22px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: var(--shadow);
             display: none;
+            overflow: hidden;
         }
 
-        .dashboard-section.active { display: block; }
+        .dashboard-section.active {
+            display: block;
+            animation: sectionIn 240ms ease-out;
+        }
+
+        .dashboard-section::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(110deg, transparent 0%, rgba(14, 165, 233, 0.06) 45%, transparent 78%),
+                repeating-radial-gradient(ellipse at 86% 8%, transparent 0 28px, rgba(14, 165, 233, 0.09) 29px 30px, transparent 31px 58px),
+                linear-gradient(115deg, transparent, rgba(14, 165, 233, 0.025), transparent);
+            transform: translateX(-100%);
+            animation: sheen 5s ease-in-out infinite;
+        }
 
         .dashboard-title {
+            position: relative;
             font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            border-left: 4px solid #667eea;
-            padding-left: 10px;
+            font-weight: 800;
+            color: #12384f;
+            margin-bottom: 14px;
+            padding-left: 14px;
+        }
+
+        .dashboard-title::after {
+            content: "观测图层";
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            color: #0369a1;
+            background: rgba(224, 242, 254, 0.78);
+            border: 1px solid rgba(14, 165, 233, 0.18);
+            font-size: 11px;
+            font-weight: 800;
+            vertical-align: middle;
+        }
+
+        .dashboard-title::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 2px;
+            bottom: 2px;
+            width: 4px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, var(--primary), var(--accent));
+            box-shadow: 0 0 16px rgba(14, 165, 233, 0.42);
         }
 
         iframe { width: 100%; height: 100%; border: none; }
@@ -107,195 +256,493 @@
         }
 
         .time-bar input[type="datetime-local"] {
-            padding: 6px 8px;
-            border: 1px solid #dfe6e9;
-            border-radius: 4px;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--text);
+            background: rgba(255,255,255,0.78);
+            transition: border-color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .time-bar input[type="date"],
+        .time-bar select {
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.78);
+            color: var(--text);
+            transition: border-color 160ms ease, box-shadow 160ms ease;
         }
 
         .time-bar button {
-            padding: 6px 12px;
+            padding: 8px 14px;
             border: none;
-            background: #667eea;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
+            box-shadow: 0 10px 24px rgba(14, 165, 233, 0.2);
+            transition: transform 160ms ease, box-shadow 160ms ease;
         }
 
-        .time-bar button:hover { opacity: 0.92; }
+        .time-bar input:focus,
+        .time-bar select:focus {
+            outline: none;
+            border-color: rgba(14, 165, 233, 0.65);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.12);
+        }
+
+        .time-bar button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 30px rgba(14, 165, 233, 0.28);
+        }
 
         .quick-range {
             display:flex;
             gap:10px;
             flex-wrap:wrap;
-            margin:8px 0 12px;
+            margin:10px 0 14px;
         }
 
         .quick-range button {
-            padding: 6px 12px;
-            border: 1px solid #dcdde1;
-            background: #f8f9fa;
-            color: #2c3e50;
-            border-radius: 6px;
+            padding: 8px 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.72);
+            color: var(--text);
+            border-radius: 8px;
             cursor: pointer;
+            transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
         }
 
         .quick-range button.active {
-            background: #667eea;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: #fff;
-            border-color: #667eea;
+            border-color: transparent;
+            box-shadow: 0 10px 22px rgba(14, 165, 233, 0.2);
+        }
+
+        .quick-range button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(14, 165, 233, 0.42);
+        }
+
+        .segmented-control {
+            display: inline-flex;
+            gap: 6px;
+            padding: 4px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.66);
+            margin: 0 12px 12px 0;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+
+        .segmented-control button {
+            padding: 8px 15px;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+        }
+
+        .segmented-control button.active {
+            background: #ffffff;
+            color: var(--primary-strong);
+            box-shadow: 0 8px 18px rgba(64, 124, 154, 0.14);
+            font-weight: 700;
+        }
+
+        .segmented-control button:hover {
+            transform: translateY(-1px);
         }
 
         .hint {
             font-size: 12px;
-            color: #666;
-            margin-bottom: 8px;
-        }
-
-        .db-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            padding: 6px 10px;
-            border: 1px solid #dcdde1;
-            border-radius: 6px;
-            background: #f8f9fa;
-        }
-
-        .db-toggle label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            color: #2c3e50;
+            color: var(--muted);
+            margin-bottom: 12px;
         }
 
         .chart-block {
+            position: relative;
             width: 100%;
-            border: 1px solid #ecf0f1;
-            border-radius: 4px;
-            background: #fff;
-            padding: 6px;
-            margin-bottom: 14px;
+            border: 1px solid rgba(88, 148, 178, 0.2);
+            border-radius: 8px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245, 251, 255, 0.88)),
+                radial-gradient(ellipse at 92% 16%, rgba(14, 165, 233, 0.045), transparent 42%);
+            padding: 8px;
+            margin-bottom: 16px;
             text-align: center;
+            box-shadow: 0 12px 28px rgba(64, 124, 154, 0.1);
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .chart-block[data-label] {
+            padding-top: 34px;
+        }
+
+        .chart-block[data-label]::before {
+            content: attr(data-label);
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            z-index: 1;
+            padding: 5px 10px;
+            border-radius: 999px;
+            color: #075985;
+            background: rgba(240, 249, 255, 0.92);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            font-size: 12px;
+            font-weight: 800;
+            box-shadow: 0 8px 16px rgba(64, 124, 154, 0.08);
+        }
+
+        .chart-block[data-label]::after {
+            content: "";
+            position: absolute;
+            top: 17px;
+            left: 132px;
+            right: 18px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(14, 165, 233, 0.34), transparent);
+        }
+
+        .chart-block:hover {
+            transform: translateY(-2px);
+            border-color: rgba(14, 165, 233, 0.36);
+            box-shadow: 0 18px 36px rgba(64, 124, 154, 0.16);
         }
 
         .chart-block img {
             width: 100%;
             height: auto;
             display: block;
+            border-radius: 6px;
+            transition: opacity 180ms ease, filter 180ms ease;
+        }
+
+        .chart-block.loading::after {
+            content: "加载中";
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            color: #0369a1;
+            background: rgba(224, 242, 254, 0.92);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            font-size: 12px;
+        }
+
+        .chart-block.loading img {
+            opacity: 0.52;
+            filter: saturate(0.8);
+        }
+
+        .chart-block strong {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .chart-block strong + div {
+            color: #0f3a52;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .realtime-grid .chart-block {
+            min-height: 96px;
+            text-align: left;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.94), rgba(240, 249, 255, 0.88)),
+                radial-gradient(circle at 88% 22%, rgba(250, 204, 21, 0.16), transparent 28%);
+        }
+
+        .realtime-grid .chart-block::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 14px;
+            bottom: 14px;
+            width: 3px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, var(--primary), var(--accent));
+            box-shadow: 0 0 14px rgba(14, 165, 233, 0.26);
+        }
+
+        .realtime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        #rtStatus {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            color: #075985;
+            background: rgba(224, 242, 254, 0.8);
+            border: 1px solid rgba(14, 165, 233, 0.18);
+        }
+
+        #rtStatus::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.42);
+            animation: pulse 1.8s ease-out infinite;
+        }
+
+        @keyframes sectionIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes sheen {
+            0%, 58% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.42); }
+            70% { box-shadow: 0 0 0 8px rgba(20, 184, 166, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
+        }
+
+        @keyframes driftClouds {
+            from { transform: translateX(0); }
+            to { transform: translateX(8%); }
         }
 
         @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; display: flex; gap: 20px; }
-            .nav-item { flex: 1; margin-bottom: 0; }
+            .topbar { align-items: stretch; flex-direction: column; padding: 14px; }
+            .topnav { width: 100%; }
+            .nav-item { flex: 1; margin-bottom: 0; justify-content: center; }
+            .content { padding: 14px; }
         }
     </style>
 </head>
 <body>
-    <aside class="sidebar">
-        <h2>🌤️ 导航菜单</h2>
-
-        <div class="nav-item active" onclick="switchPage('wind-barbs', this)">📊 综合仪表盘</div>
-        <div class="nav-item" onclick="switchPage('custom-chart', this)">📈 实时气象数据</div>
-        <div class="nav-item" onclick="switchPage('data-table', this)">📋 数据表格</div>
-
-        <hr style="border: none; border-top: 1px solid #555; margin: 20px 0;">
-
-        <div class="nav-item" onclick="switchPage('settings', this)">⚙️ 设置</div>
-    </aside>
+    <div class="topbar">
+        <div class="brand">
+            <h1>🌤 气象数据监测平台</h1>
+        </div>
+        <nav class="topnav">
+            <div class="nav-item" onclick="switchPage('curve-chart', this)">📊 曲线图</div>
+            <div class="nav-item active" onclick="switchPage('realtime-data', this)">⚡ 实时数据看板</div>
+        </nav>
+    </div>
 
     <div class="main-container">
-        <header>
-            <h1>🎯 气象监测系统</h1>
-            <p>实时数据监测和可视化分析平台</p>
-        </header>
-
         <div class="content">
-            <div id="wind-barbs" class="dashboard-section active">
-                <div class="dashboard-title">📊 综合仪表盘</div>
-                <div class="hint">支持"最近区间滚动查询"和"历史固定区间查询（手动）"。历史模式不自动刷新。</div>
+            <div id="curve-chart" class="dashboard-section">
+                <div class="dashboard-title" id="windDashboardTitle">📊 曲线图 - 实时 / 分钟级数据库</div>
+                <div class="hint" id="curveHint">实时模式按最近时间范围自动刷新；历史模式按手动时间区间查询一次。</div>
 
-                <div class="quick-range">
-                    <button type="button" data-min="5" onclick="setQuickRange(5, this)">最近 5 分钟</button>
-                    <button type="button" data-min="15" onclick="setQuickRange(15, this)">最近 15 分钟</button>
-                    <button type="button" data-min="30" onclick="setQuickRange(30, this)">最近 30 分钟</button>
-                    <button type="button" data-min="60" onclick="setQuickRange(60, this)">最近 1 小时</button>
+                <div class="segmented-control" id="curveModeButtons">
+                    <button type="button" data-mode="realtime" class="active" onclick="switchCurveMode('realtime', this)">实时</button>
+                    <button type="button" data-mode="history" onclick="switchCurveMode('history', this)">历史</button>
                 </div>
 
-                <div class="time-bar">
-                    <input type="datetime-local" id="startTime" />
-                    <span>~</span>
-                    <input type="datetime-local" id="endTime" />
-                    <button onclick="manualQueryWindBarbs()">查询（历史区间）</button>
+                <div class="segmented-control" id="curveDbButtons">
+                    <button type="button" data-db="minute" class="active" onclick="switchCurveDb('minute', this)">分钟</button>
+                    <button type="button" data-db="hour" onclick="switchCurveDb('hour', this)">小时</button>
+                </div>
 
-                    <div class="db-toggle">
-                        <label>
-                            <input type="radio" name="dbLevel" value="minute" checked />
-                            分钟级数据库
-                        </label>
-                        <label>
-                            <input type="radio" name="dbLevel" value="hour" />
-                            小时级数据库
-                        </label>
+                <div class="quick-range" id="quickRangeButtons">
+                </div>
+
+                <div class="time-bar" id="historyTimeBar">
+                    <div id="minuteHistoryInputs">
+                        <input type="datetime-local" id="startTime" />
+                        <span>~</span>
+                        <input type="datetime-local" id="endTime" />
                     </div>
+                    <div id="hourHistoryInputs" style="display: none;">
+                        <input type="date" id="startDateHour" />
+                        <select id="startHour"></select>
+                        <span>时 ~</span>
+                        <input type="date" id="endDateHour" />
+                        <select id="endHour"></select>
+                        <span>时</span>
+                    </div>
+                    <button onclick="manualQueryCharts()">查询</button>
                 </div>
 
-                <div class="chart-block">
+                <div class="chart-block" data-label="🌡 气温 / 露温">
                     <img id="tempDewpointImg" src="/static/temp_dewpoint.png" alt="气温/露温图">
                 </div>
 
-                <div class="chart-block">
+                <div class="chart-block" data-label="💧 相对湿度">
                     <img id="humidityImg" src="/static/humidity.png" alt="湿度图">
                 </div>
 
-                <div class="chart-block">
+                <div class="chart-block" data-label="🌀 气压">
                     <img id="pressureImg" src="/static/pressure.png" alt="压强图（pressure）">
                 </div>
 
                 <!-- ✅ 新增：分雨图 -->
-                <div class="chart-block">
+                <div class="chart-block" data-label="🌧 降雨">
                     <img id="rainImg" src="/static/rain.png" alt="分雨图">
                 </div>
 
-                <div class="chart-block">
+                <div class="chart-block" data-label="🧭 风羽">
                     <img id="windBarbsImg" src="/static/windbarb.png" alt="风羽图">
                 </div>
             </div>
 
-            <div id="custom-chart" class="dashboard-section">
-                <div class="dashboard-title">📈 自定义图表</div>
-                <div class="dashboard-content">
-                    <canvas id="customChartCanvas"></canvas>
+            <div id="realtime-data" class="dashboard-section active">
+                <div class="dashboard-title">⚡ 实时数据看板</div>
+                <div class="time-bar">
+                    <label for="rtMinutes">查询最近</label>
+                    <input id="rtMinutes" type="number" min="1" value="5" style="width: 80px; padding: 6px 8px; border: 1px solid #dfe6e9; border-radius: 4px;">
+                    <span>分钟</span>
+                    <label for="rtInterval">刷新间隔</label>
+                    <select id="rtInterval" style="padding: 6px 8px; border: 1px solid #dfe6e9; border-radius: 4px;">
+                        <option value="5000">5 秒</option>
+                        <option value="10000" selected>10 秒</option>
+                        <option value="30000">30 秒</option>
+                    </select>
+                    <button onclick="refreshRealtimeData()">立即刷新</button>
+                </div>
+                <div class="hint" id="rtStatus">等待首次刷新...</div>
+
+                <div class="realtime-grid">
+                    <div class="chart-block"><strong>数据时间</strong><div id="rtTime">-</div></div>
+                    <div class="chart-block"><strong>气温 (°C)</strong><div id="rtTemp">-</div></div>
+                    <div class="chart-block"><strong>湿度 (%)</strong><div id="rtHumidity">-</div></div>
+                    <div class="chart-block"><strong>气压 (hPa)</strong><div id="rtPressure">-</div></div>
+                    <div class="chart-block"><strong>瞬时风速 (m/s)</strong><div id="rtWindSpeed">-</div></div>
+                    <div class="chart-block"><strong>瞬时风风级</strong><div id="rtWindLevel">-</div></div>
+                    <div class="chart-block"><strong>瞬时风向</strong><div id="rtWindDirection">-</div></div>
+                    <div class="chart-block"><strong>瞬时风向角 (°)</strong><div id="rtWindAngle">-</div></div>
+                    <div class="chart-block"><strong>极大风风速 (m/s)</strong><div id="rtMaxWindSpeed">-</div></div>
+                    <div class="chart-block"><strong>极大风风级</strong><div id="rtMaxWindLevel">-</div></div>
+                    <div class="chart-block"><strong>极大风风向</strong><div id="rtMaxWindDirection">-</div></div>
+                    <div class="chart-block"><strong>极大风向角 (°)</strong><div id="rtMaxWindAngle">-</div></div>
+                    <div class="chart-block"><strong>2分钟平均风速 (m/s)</strong><div id="rtWindAvg2m">-</div></div>
+                    <div class="chart-block"><strong>10分钟平均风速 (m/s)</strong><div id="rtWindAvg10m">-</div></div>
+                    <div class="chart-block"><strong>瞬时雨量</strong><div id="rtRain">-</div></div>
+                    <div class="chart-block"><strong>本小时累计雨量</strong><div id="rtCurHourRain">-</div></div>
                 </div>
             </div>
 
-            <div id="data-table" class="dashboard-section">
-                <div class="dashboard-title">📋 原始数据表格</div>
-                <div class="dashboard-content">
-                    <div id="dataTableContent" style="padding: 20px; overflow-y: auto; height: 100%;">
-                        <p>数据表格内容将在这里显示</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="settings" class="dashboard-section">
-                <div class="dashboard-title">⚙️ 系统设置</div>
-                <div style="padding: 20px;">
-                    <p>刷新间隔: <input type="text" value="10s" style="padding: 5px;"></p>
-                    <p>数据源: <input type="text" value="InfluxDB" style="padding: 5px;"></p>
-                    <button onclick="alert('设置已保存')" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">保存设置</button>
-                </div>
-            </div>
         </div>
     </div>
 
     <script>
         let windBarbsInterval = null;
         let currentQuickMinutes = null;
+        let realtimeInterval = null;
+        let currentCurveMode = "realtime";
+        let currentDbLevel = "minute";
+        const dbLevelTitle = {
+            minute: "分钟级数据库",
+            hour: "小时级数据库"
+        };
+        const quickRangeOptions = {
+            minute: [
+                { minutes: 15, label: "最近 15 分钟" },
+                { minutes: 30, label: "最近 30 分钟" },
+                { minutes: 60, label: "最近 1 小时" }
+            ],
+            hour: [
+                { minutes: 1440, label: "最近 24 小时" },
+                { minutes: 360, label: "最近 6 小时" }
+            ]
+        };
 
-        function switchPage(pageId, el) {
+        function updateCurveUi() {
+            const titleEl = document.getElementById("windDashboardTitle");
+            const modeText = currentCurveMode === "realtime" ? "实时" : "历史";
+            if (titleEl) titleEl.textContent = `📊 曲线图 - ${modeText} / ${dbLevelTitle[currentDbLevel] || dbLevelTitle.minute}`;
+
+            const hintEl = document.getElementById("curveHint");
+            if (hintEl) {
+                hintEl.textContent = currentCurveMode === "realtime"
+                    ? "实时模式按最近时间范围自动刷新。"
+                    : "历史模式按手动时间区间查询一次，不自动刷新。";
+            }
+
+            document.querySelectorAll('#curveModeButtons button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === currentCurveMode);
+            });
+            document.querySelectorAll('#curveDbButtons button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.db === currentDbLevel);
+            });
+
+            const quickRange = document.getElementById("quickRangeButtons");
+            const historyTimeBar = document.getElementById("historyTimeBar");
+            const minuteHistoryInputs = document.getElementById("minuteHistoryInputs");
+            const hourHistoryInputs = document.getElementById("hourHistoryInputs");
+            if (quickRange) quickRange.style.display = currentCurveMode === "realtime" ? "flex" : "none";
+            if (historyTimeBar) historyTimeBar.style.display = currentCurveMode === "history" ? "flex" : "none";
+            if (minuteHistoryInputs) minuteHistoryInputs.style.display = currentDbLevel === "minute" ? "inline-flex" : "none";
+            if (hourHistoryInputs) hourHistoryInputs.style.display = currentDbLevel === "hour" ? "inline-flex" : "none";
+        }
+
+        function initHourSelects() {
+            const options = Array.from({ length: 24 }, (_, hour) =>
+                `<option value="${pad(hour)}">${pad(hour)}</option>`
+            ).join("");
+            ["startHour", "endHour"].forEach(id => {
+                const select = document.getElementById(id);
+                if (select) select.innerHTML = options;
+            });
+        }
+
+        function renderQuickRangeButtons() {
+            const container = document.getElementById("quickRangeButtons");
+            if (!container) return;
+            const options = quickRangeOptions[currentDbLevel] || quickRangeOptions.minute;
+            container.innerHTML = options.map(option =>
+                `<button type="button" data-min="${option.minutes}" onclick="setQuickRange(${option.minutes}, this)">${option.label}</button>`
+            ).join("");
+        }
+
+        function getDefaultQuickMinutes() {
+            return currentDbLevel === "hour" ? 1440 : 15;
+        }
+
+        function switchCurveMode(mode, el) {
+            currentCurveMode = mode === "history" ? "history" : "realtime";
+            updateCurveUi();
+            if (currentCurveMode === "realtime") {
+                const defaultMinutes = currentQuickMinutes || getDefaultQuickMinutes();
+                const btn = document.querySelector(`.quick-range button[data-min="${defaultMinutes}"]`)
+                    || document.querySelector(`.quick-range button[data-min="${getDefaultQuickMinutes()}"]`);
+                setQuickRange(Number(btn?.dataset.min || getDefaultQuickMinutes()), btn);
+            } else {
+                stopWindAutoRefresh();
+                syncHourInputsFromDates();
+            }
+        }
+
+        function switchCurveDb(dbLevel, el) {
+            currentDbLevel = dbLevel === "hour" ? "hour" : "minute";
+            renderQuickRangeButtons();
+            updateCurveUi();
+            if (currentCurveMode === "realtime") {
+                const defaultMinutes = getDefaultQuickMinutes();
+                const defaultBtn = document.querySelector(`.quick-range button[data-min="${defaultMinutes}"]`);
+                setQuickRange(defaultMinutes, defaultBtn);
+            } else {
+                stopWindAutoRefresh();
+                syncHourInputsFromDates();
+            }
+        }
+
+        function switchPage(pageId, el, options = {}) {
             const sections = document.querySelectorAll('.dashboard-section');
             sections.forEach(section => section.classList.remove('active'));
 
@@ -305,14 +752,60 @@
             document.getElementById(pageId).classList.add('active');
             if (el) el.classList.add('active');
 
-            if (pageId !== 'wind-barbs') stopWindAutoRefresh();
-            if (pageId === 'wind-barbs') refreshWindBarbImageOnly();
-            if (pageId === 'custom-chart') drawCustomChart();
+            if (pageId !== 'curve-chart') stopWindAutoRefresh();
+            if (pageId !== 'realtime-data') stopRealtimeAutoRefresh();
+            if (pageId === 'curve-chart' && options.refresh !== false) {
+                updateCurveUi();
+                if (currentCurveMode === "realtime") {
+                    const defaultMinutes = currentQuickMinutes || getDefaultQuickMinutes();
+                    const btn = document.querySelector(`.quick-range button[data-min="${defaultMinutes}"]`)
+                        || document.querySelector(`.quick-range button[data-min="${getDefaultQuickMinutes()}"]`);
+                    setQuickRange(Number(btn?.dataset.min || getDefaultQuickMinutes()), btn);
+                } else {
+                    stopWindAutoRefresh();
+                }
+            }
+            if (pageId === 'realtime-data') startRealtimeAutoRefresh();
         }
 
         function pad(n) { return n < 10 ? '0' + n : n; }
         function toInputVal(d) {
             return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+        function toDateVal(d) {
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+        }
+
+        function syncHourInputsFromDates() {
+            const startRaw = document.getElementById("startTime").value;
+            const endRaw = document.getElementById("endTime").value;
+            const start = startRaw ? new Date(startRaw) : null;
+            const end = endRaw ? new Date(endRaw) : null;
+            if (start && Number.isFinite(start.getTime())) {
+                document.getElementById("startDateHour").value = toDateVal(start);
+                document.getElementById("startHour").value = pad(start.getHours());
+            }
+            if (end && Number.isFinite(end.getTime())) {
+                document.getElementById("endDateHour").value = toDateVal(end);
+                document.getElementById("endHour").value = pad(end.getHours());
+            }
+        }
+
+        function getChartRangeInputs() {
+            if (currentCurveMode === "history" && currentDbLevel === "hour") {
+                const startDate = document.getElementById("startDateHour").value;
+                const startHour = document.getElementById("startHour").value;
+                const endDate = document.getElementById("endDateHour").value;
+                const endHour = document.getElementById("endHour").value;
+                return {
+                    start: startDate && startHour ? `${startDate}T${startHour}:00` : "",
+                    end: endDate && endHour ? `${endDate}T${endHour}:00` : ""
+                };
+            }
+            return {
+                start: document.getElementById("startTime").value,
+                end: document.getElementById("endTime").value
+            };
         }
 
         function clearQuickActive() {
@@ -328,40 +821,93 @@
             const start = new Date(end.getTime() - minutes * 60 * 1000);
             document.getElementById("startTime").value = toInputVal(start);
             document.getElementById("endTime").value = toInputVal(end);
+            syncHourInputsFromDates();
 
-            queryWindBarbs();
+            queryCharts();
         }
 
-        function manualQueryWindBarbs() {
+        function manualQueryCharts() {
             currentQuickMinutes = null;
             clearQuickActive();
-            queryWindBarbs();
+            stopWindAutoRefresh();
+            queryCharts();
         }
 
-        async function queryWindBarbs() {
-            const start = document.getElementById("startTime").value;
-            const end = document.getElementById("endTime").value;
-            if (!start || !end) return alert("请选择开始和结束时间");
-            if (new Date(start) >= new Date(end)) return alert("开始时间必须早于结束时间");
+        function validateChartRange(start, end, selectedDb) {
+            if (!start || !end) {
+                alert("请选择开始和结束时间");
+                return false;
+            }
+            if (new Date(start) >= new Date(end)) {
+                alert("开始时间必须早于结束时间");
+                return false;
+            }
 
-            const selectedDb = document.querySelector('input[name="dbLevel"]:checked')?.value || "minute";
+            const diffMs = new Date(end) - new Date(start);
+            const diffHours = diffMs / (1000 * 60 * 60);
 
-            const imgWind = document.getElementById("windBarbsImg");
-            const imgTemp = document.getElementById("tempDewpointImg");
-            const imgHumidity = document.getElementById("humidityImg");
-            const imgPressure = document.getElementById("pressureImg");
-            const imgRain = document.getElementById("rainImg");
+            if (selectedDb === "minute") {
+                if (diffHours > 2) {
+                    alert("分钟级数据库查询区间不得超过2小时");
+                    return false;
+                }
+            }
+            if (selectedDb === "hour") {
+                if (diffHours > 72) {
+                    alert("小时级数据库查询区间不得超过72小时");
+                    return false;
+                }
+            }
+            return true;
+        }
 
-            imgWind.src = `/windbarb?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${Date.now()}`;
-            imgTemp.src = `/temp_dewpoint?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${Date.now()}`;
-            imgHumidity.src = `/humidity?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${Date.now()}`;
-            imgPressure.src = `/pressure?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${Date.now()}`;
-            imgRain.src = `/rain?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${Date.now()}`;
+        function setChartSrc(img, src) {
+            if (!img) return;
+            const block = img.closest('.chart-block');
+            if (block) block.classList.add('loading');
+            img.onload = () => {
+                if (block) block.classList.remove('loading');
+            };
+            img.onerror = () => {
+                if (block) block.classList.remove('loading');
+            };
+            img.src = src;
+        }
+
+        function updateChartImages(start, end, selectedDb) {
+            const t = Date.now();
+            setChartSrc(
+                document.getElementById("windBarbsImg"),
+                `/windbarb?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${t}`
+            );
+            setChartSrc(
+                document.getElementById("tempDewpointImg"),
+                `/temp_dewpoint?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${t}`
+            );
+            setChartSrc(
+                document.getElementById("humidityImg"),
+                `/humidity?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${t}`
+            );
+            setChartSrc(
+                document.getElementById("pressureImg"),
+                `/pressure?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${t}`
+            );
+            setChartSrc(
+                document.getElementById("rainImg"),
+                `/rain?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&db=${selectedDb}&t=${t}`
+            );
+        }
+
+        async function queryCharts() {
+            const { start, end } = getChartRangeInputs();
+            const selectedDb = currentDbLevel;
+            if (!validateChartRange(start, end, selectedDb)) return;
+
+            updateChartImages(start, end, selectedDb);
 
             stopWindAutoRefresh();
 
-            // ✅ 只有快捷模式才自动刷新
-            if (currentQuickMinutes !== null) {
+            if (currentCurveMode === "realtime" && currentQuickMinutes !== null) {
                 windBarbsInterval = setInterval(() => {
                     const nowEnd = new Date();
                     const nowStart = new Date(nowEnd.getTime() - currentQuickMinutes * 60 * 1000);
@@ -371,16 +917,12 @@
                     document.getElementById("startTime").value = s;
                     document.getElementById("endTime").value = e;
 
-                    imgWind.src = `/windbarb?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                    imgTemp.src = `/temp_dewpoint?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                    imgHumidity.src = `/humidity?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                    imgPressure.src = `/pressure?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                    imgRain.src = `/rain?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
+                    updateChartImages(s, e, selectedDb);
                 }, 60000);
             }
         }
 
-        function refreshWindBarbImageOnly() {
+        function refreshChartImagesOnce() {
             const imgWind = document.getElementById('windBarbsImg');
             const imgTemp = document.getElementById('tempDewpointImg');
             const imgHumidity = document.getElementById('humidityImg');
@@ -390,25 +932,21 @@
 
             const s = document.getElementById("startTime").value;
             const e = document.getElementById("endTime").value;
-            const selectedDb = document.querySelector('input[name="dbLevel"]:checked')?.value || "minute";
+            const selectedDb = currentDbLevel;
 
-            if (s && e) {
-                imgWind.src = `/windbarb?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                imgTemp.src = `/temp_dewpoint?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                imgHumidity.src = `/humidity?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                imgPressure.src = `/pressure?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
-                imgRain.src = `/rain?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&db=${selectedDb}&t=${Date.now()}`;
+            if (s && e && validateChartRange(s, e, selectedDb)) {
+                updateChartImages(s, e, selectedDb);
             } else {
                 const baseW = imgWind.src.split('&t=')[0].split('?t=')[0];
                 const baseT = imgTemp.src.split('&t=')[0].split('?t=')[0];
                 const baseH = imgHumidity.src.split('&t=')[0].split('?t=')[0];
                 const baseP = imgPressure.src.split('&t=')[0].split('?t=')[0];
                 const baseR = imgRain.src.split('&t=')[0].split('?t=')[0];
-                imgWind.src = baseW + (baseW.includes('?') ? '&' : '?') + 't=' + Date.now();
-                imgTemp.src = baseT + (baseT.includes('?') ? '&' : '?') + 't=' + Date.now();
-                imgHumidity.src = baseH + (baseH.includes('?') ? '&' : '?') + 't=' + Date.now();
-                imgPressure.src = baseP + (baseP.includes('?') ? '&' : '?') + 't=' + Date.now();
-                imgRain.src = baseR + (baseR.includes('?') ? '&' : '?') + 't=' + Date.now();
+                setChartSrc(imgWind, baseW + (baseW.includes('?') ? '&' : '?') + 't=' + Date.now());
+                setChartSrc(imgTemp, baseT + (baseT.includes('?') ? '&' : '?') + 't=' + Date.now());
+                setChartSrc(imgHumidity, baseH + (baseH.includes('?') ? '&' : '?') + 't=' + Date.now());
+                setChartSrc(imgPressure, baseP + (baseP.includes('?') ? '&' : '?') + 't=' + Date.now());
+                setChartSrc(imgRain, baseR + (baseR.includes('?') ? '&' : '?') + 't=' + Date.now());
             }
         }
 
@@ -419,29 +957,90 @@
             }
         }
 
-        function drawCustomChart() {
-            const canvas = document.getElementById('customChartCanvas');
-            if (!canvas || !canvas.getContext) return;
+        function formatNumber(v) {
+            if (v === null || v === undefined || v === '') return '-';
+            const n = Number(v);
+            return Number.isFinite(n) ? n.toFixed(2) : String(v);
+        }
 
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.parentElement.offsetWidth - 40;
-            canvas.height = canvas.parentElement.offsetHeight - 40;
+        async function refreshRealtimeData() {
+            const minutesInput = document.getElementById('rtMinutes');
+            const statusEl = document.getElementById('rtStatus');
+            const minutes = Number(minutesInput.value || 5);
+            if (!Number.isFinite(minutes) || minutes <= 0) {
+                statusEl.textContent = '参数错误：分钟数必须大于 0';
+                return;
+            }
 
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            try {
+                const resp = await fetch(`/api/realtime?minutes=${encodeURIComponent(minutes)}&t=${Date.now()}`);
+                const payload = await resp.json();
+                if (!resp.ok || !payload.ok) {
+                    throw new Error(payload.error || `HTTP ${resp.status}`);
+                }
 
-            ctx.fillStyle = '#2c3e50';
-            ctx.font = 'bold 18px Arial';
-            ctx.fillText('自定义图表（示例）', 30, 40);
+                const d = payload.data || {};
+                document.getElementById('rtTime').textContent = d.time || '-';
+                document.getElementById('rtTemp').textContent = formatNumber(d.temperature);
+                document.getElementById('rtHumidity').textContent = formatNumber(d.humidity);
+                document.getElementById('rtPressure').textContent = formatNumber(d.pressure);
+                document.getElementById('rtWindSpeed').textContent = formatNumber(d.wind_speed);
+                document.getElementById('rtWindAvg2m').textContent = formatNumber(d.avg_speed_2m);
+                document.getElementById('rtWindAvg10m').textContent = formatNumber(d.avg_speed_10m);
+                document.getElementById('rtWindLevel').textContent = formatNumber(d.wind_level);
+                document.getElementById('rtMaxWindSpeed').textContent = formatNumber(d.max_wind_speed);
+                document.getElementById('rtMaxWindLevel').textContent = formatNumber(d.max_wind_level);
+                document.getElementById('rtMaxWindDirection').textContent = d.max_wind_direction || '-';
+                document.getElementById('rtWindDirection').textContent = d.wind_direction || '-';
+                document.getElementById('rtWindAngle').textContent = formatNumber(d.wind_angle);
+                document.getElementById('rtRain').textContent = formatNumber(d.instantaneous_rainfall);
+                document.getElementById('rtCurHourRain').textContent = formatNumber(d.current_hour_rainfall);
+                document.getElementById('rtMaxWindAngle').textContent = formatNumber(d.max_wind_angle);
+                const rtSourceEl = document.getElementById('rtSource');
+                if (rtSourceEl) rtSourceEl.textContent = payload.source || '-';
+                statusEl.textContent = `最后刷新: ${payload.server_time || '-'} (查询最近 ${minutes} 分钟)`;
+            } catch (err) {
+                statusEl.textContent = `刷新失败: ${err.message}`;
+            }
+        }
 
-            ctx.fillStyle = '#999';
-            ctx.font = '14px Arial';
-            ctx.fillText('您的自定义图表将在这里绘制...', 30, 100);
+        function stopRealtimeAutoRefresh() {
+            if (realtimeInterval) {
+                clearInterval(realtimeInterval);
+                realtimeInterval = null;
+            }
+        }
+
+        function startRealtimeAutoRefresh() {
+            stopRealtimeAutoRefresh();
+            refreshRealtimeData();
+            const intervalSelect = document.getElementById('rtInterval');
+            const ms = Number(intervalSelect.value || 10000);
+            realtimeInterval = setInterval(refreshRealtimeData, ms);
         }
 
         (function initDefault() {
-            const defaultBtn = document.querySelector('.quick-range button[data-min="15"]');
-            setQuickRange(15, defaultBtn);
+            renderQuickRangeButtons();
+            updateCurveUi();
+            initHourSelects();
+            const defaultMinutes = getDefaultQuickMinutes();
+            const defaultBtn = document.querySelector(`.quick-range button[data-min="${defaultMinutes}"]`);
+            currentQuickMinutes = defaultMinutes;
+            if (defaultBtn) defaultBtn.classList.add('active');
+            const end = new Date();
+            const start = new Date(end.getTime() - defaultMinutes * 60 * 1000);
+            document.getElementById("startTime").value = toInputVal(start);
+            document.getElementById("endTime").value = toInputVal(end);
+            syncHourInputsFromDates();
+            const intervalSelect = document.getElementById('rtInterval');
+            if (intervalSelect) {
+                intervalSelect.addEventListener('change', () => {
+                    if (document.getElementById('realtime-data').classList.contains('active')) {
+                        startRealtimeAutoRefresh();
+                    }
+                });
+            }
+            startRealtimeAutoRefresh();
         })();
     </script>
 </body>

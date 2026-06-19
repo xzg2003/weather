@@ -14,18 +14,24 @@ zh_font = matplotlib.font_manager.FontProperties(fname="Arial_Unicode_MS.ttf")
 #matplotlib.rcParams['axes.unicode_minus'] = False
 
 BJ_TZ = ZoneInfo("Asia/Shanghai")
+PLOT_LAYOUT = {"left": 0.075, "right": 0.94, "top": 0.86, "bottom": 0.22}
 
 def _to_float_array(s: pd.Series) -> np.ndarray:
     return pd.to_numeric(s, errors="coerce").astype(float).to_numpy()
 
 def _safe_savefig(fig, output_path: str, dpi: int = 150):
     try:
-        fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=dpi)
     except BaseException as exc:
         if exc.__class__.__name__ == "Done":
             fig.savefig(output_path, dpi=dpi)
         else:
             raise
+
+def _set_padded_xlim(ax, start_local, end_local):
+    span_seconds = max((end_local - start_local).total_seconds(), 60.0)
+    x_pad = pd.Timedelta(seconds=max(span_seconds * 0.04, 30.0))
+    ax.set_xlim(start_local - x_pad, end_local + x_pad)
 
 def _apply_smart_time_axis(ax, start_time: str, end_time: str, tz=BJ_TZ):
     """
@@ -45,17 +51,21 @@ def _apply_smart_time_axis(ax, start_time: str, end_time: str, tz=BJ_TZ):
         formatter = mdates.DateFormatter("%H:%M", tz=tz)
         rotation = 0
     elif span_hours <= 6:   # 1~6小时
-        locator = mdates.MinuteLocator(interval=15, tz=tz)
+        locator = mdates.HourLocator(interval=1, tz=tz)
         formatter = mdates.DateFormatter("%H:%M", tz=tz)
         rotation = 0
-    elif span_hours <= 24:  # 6~24小时
-        locator = mdates.HourLocator(interval=1, tz=tz)
+    elif span_hours <= 12:  # 6~12小时
+        locator = mdates.HourLocator(interval=2, tz=tz)
         formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
-        rotation = 30
+        rotation = 35
+    elif span_hours <= 24:  # 12~24小时
+        locator = mdates.HourLocator(interval=4, tz=tz)
+        formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
+        rotation = 35
     elif span_days <= 7:    # 1~7天
-        locator = mdates.HourLocator(interval=6, tz=tz)
+        locator = mdates.HourLocator(interval=8, tz=tz)
         formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
-        rotation = 30
+        rotation = 35
     elif span_days <= 31:   # 1~31天
         locator = mdates.DayLocator(interval=1, tz=tz)
         formatter = mdates.DateFormatter("%m-%d", tz=tz)
@@ -131,7 +141,7 @@ from(bucket: "{bucket}")
 
     start_local = pd.to_datetime(start_time, utc=True).tz_convert(BJ_TZ)
     end_local = pd.to_datetime(end_time, utc=True).tz_convert(BJ_TZ)
-    ax.set_xlim(start_local, end_local)
+    _set_padded_xlim(ax, start_local, end_local)
 
     ax.plot(times_local, humidity, color="#1E88E5", lw=1.6, label="湿度")
 
@@ -177,7 +187,7 @@ from(bucket: "{bucket}")
     _apply_smart_time_axis(ax, start_time, end_time, tz=BJ_TZ)
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.tight_layout()
+    fig.subplots_adjust(**PLOT_LAYOUT)
     _safe_savefig(fig, output_path, dpi=150)
     plt.close(fig)
     client.close()

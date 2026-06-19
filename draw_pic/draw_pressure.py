@@ -9,23 +9,29 @@ import matplotlib.dates as mdates
 from influxdb_client import InfluxDBClient
 from collections import defaultdict
 from zoneinfo import ZoneInfo
-
-matplotlib.rcParams["font.sans-serif"] = ["SimHei"]
-matplotlib.rcParams["axes.unicode_minus"] = False
+zh_font = matplotlib.font_manager.FontProperties(fname="Arial_Unicode_MS.ttf")
+#matplotlib.rcParams["font.sans-serif"] = ["Noto Sans CJK SC"]
+#matplotlib.rcParams["axes.unicode_minus"] = False
 
 BJ_TZ = ZoneInfo("Asia/Shanghai")
+PLOT_LAYOUT = {"left": 0.075, "right": 0.94, "top": 0.86, "bottom": 0.22}
 
 def _to_float_array(s: pd.Series) -> np.ndarray:
     return pd.to_numeric(s, errors="coerce").astype(float).to_numpy()
 
 def _safe_savefig(fig, output_path: str, dpi: int = 150):
     try:
-        fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=dpi)
     except BaseException as exc:
         if exc.__class__.__name__ == "Done":
             fig.savefig(output_path, dpi=dpi)
         else:
             raise
+
+def _set_padded_xlim(ax, start_local, end_local):
+    span_seconds = max((end_local - start_local).total_seconds(), 60.0)
+    x_pad = pd.Timedelta(seconds=max(span_seconds * 0.04, 30.0))
+    ax.set_xlim(start_local - x_pad, end_local + x_pad)
 
 def _apply_smart_time_axis(ax, start_time: str, end_time: str, tz=BJ_TZ):
     start_local = pd.to_datetime(start_time, utc=True).tz_convert(tz)
@@ -41,17 +47,21 @@ def _apply_smart_time_axis(ax, start_time: str, end_time: str, tz=BJ_TZ):
         formatter = mdates.DateFormatter("%H:%M", tz=tz)
         rotation = 0
     elif span_hours <= 6:
-        locator = mdates.MinuteLocator(interval=15, tz=tz)
+        locator = mdates.HourLocator(interval=1, tz=tz)
         formatter = mdates.DateFormatter("%H:%M", tz=tz)
         rotation = 0
+    elif span_hours <= 12:
+        locator = mdates.HourLocator(interval=2, tz=tz)
+        formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
+        rotation = 35
     elif span_hours <= 24:
-        locator = mdates.HourLocator(interval=1, tz=tz)
+        locator = mdates.HourLocator(interval=4, tz=tz)
         formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
-        rotation = 30
+        rotation = 35
     elif span_days <= 7:
-        locator = mdates.HourLocator(interval=6, tz=tz)
+        locator = mdates.HourLocator(interval=8, tz=tz)
         formatter = mdates.DateFormatter("%m-%d %H:%M", tz=tz)
-        rotation = 30
+        rotation = 35
     elif span_days <= 31:
         locator = mdates.DayLocator(interval=1, tz=tz)
         formatter = mdates.DateFormatter("%m-%d", tz=tz)
@@ -123,7 +133,7 @@ from(bucket: "{bucket}")
 
     start_local = pd.to_datetime(start_time, utc=True).tz_convert(BJ_TZ)
     end_local = pd.to_datetime(end_time, utc=True).tz_convert(BJ_TZ)
-    ax.set_xlim(start_local, end_local)
+    _set_padded_xlim(ax, start_local, end_local)
 
     ax.plot(times_local, pressure, color="#000000", lw=1.6, label="压强")
 
@@ -135,7 +145,7 @@ from(bucket: "{bucket}")
 
     # ===== 方案1：按像素间隔防重叠标注 =====
     fig.canvas.draw()
-    min_px = 60
+    min_px = 30
     last_x_px = None
     for i in range(len(times_local)):
         if not np.isfinite(pressure[i]):
@@ -149,23 +159,23 @@ from(bucket: "{bucket}")
                 xytext=(0, 8),
                 textcoords="offset points",
                 ha="center",
-                fontsize=7,
+                fontsize=8,
                 color="#000000",
                 clip_on=True,
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.6),
             )
             last_x_px = x_px
 
-    ax.set_ylabel("气压", fontsize=11)
-    ax.set_title("压强（北京时间 UTC+8）", fontsize=12)
-    ax.legend(loc="upper left", fontsize=10)
+    ax.set_ylabel("气压", fontsize=11, fontproperties=zh_font)
+    ax.set_title("压强（北京时间 UTC+8）", fontsize=12, fontproperties=zh_font)
+    ax.legend(loc="upper left", fontsize=10, prop=zh_font)
     ax.grid(True, linestyle="--", alpha=0.3)
 
     # ✅ 动态 x 轴刻度
     _apply_smart_time_axis(ax, start_time, end_time, tz=BJ_TZ)
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.tight_layout()
+    fig.subplots_adjust(**PLOT_LAYOUT)
     _safe_savefig(fig, output_path, dpi=150)
     plt.close(fig)
     client.close()

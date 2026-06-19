@@ -10,6 +10,7 @@ from draw_pic.draw_rain import generate_rain_chart
 import os
 import traceback
 import csv
+import tempfile
 
 try:
     from query.query_data import query_time_range
@@ -106,6 +107,34 @@ def _normalize_realtime_payload(raw: dict) -> dict:
         "current_hour_rainfall": _safe_float(raw.get("current_hour_rainfall")),
     }
 
+def _send_generated_png(generator, filename: str, start_utc: str, end_utc: str, db_level: str):
+    os.makedirs("static", exist_ok=True)
+    tmp = tempfile.NamedTemporaryFile(
+        prefix=f"{filename}_",
+        suffix=".png",
+        dir="static",
+        delete=False,
+    )
+    output_path = tmp.name
+    tmp.close()
+
+    generator(start_utc, end_utc, output_path, db_level=db_level)
+    if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+        raise RuntimeError("image not generated")
+
+    response = send_file(output_path, mimetype="image/png", max_age=0)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+
+    @response.call_on_close
+    def _cleanup_generated_png():
+        try:
+            os.remove(output_path)
+        except OSError:
+            pass
+
+    return response
+
 @app.route("/api/realtime")
 def api_realtime():
     minutes = request.args.get("minutes", "5")
@@ -151,11 +180,7 @@ def windbarb():
     start_utc, end_utc, db_level, err = _validate_and_convert()
     if err: return err
     try:
-        output_path = "static/windbarb.png"
-        generate_windbarb(start_utc, end_utc, output_path, db_level=db_level)
-        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-            return jsonify({"error": "image not generated"}), 500
-        return send_file(output_path, mimetype="image/png")
+        return _send_generated_png(generate_windbarb, "windbarb", start_utc, end_utc, db_level)
     except ValueError as e:
         print("[windbarb] ValueError:", str(e))
         return jsonify({"error": str(e)}), 400
@@ -169,11 +194,7 @@ def temp_dewpoint():
     start_utc, end_utc, db_level, err = _validate_and_convert()
     if err: return err
     try:
-        output_path = "static/temp_dewpoint.png"
-        generate_temp_dewpoint(start_utc, end_utc, output_path, db_level=db_level)
-        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-            return jsonify({"error": "image not generated"}), 500
-        return send_file(output_path, mimetype="image/png")
+        return _send_generated_png(generate_temp_dewpoint, "temp_dewpoint", start_utc, end_utc, db_level)
     except ValueError as e:
         print("[temp_dewpoint] ValueError:", str(e))
         return jsonify({"error": str(e)}), 400
@@ -187,11 +208,7 @@ def humidity():
     start_utc, end_utc, db_level, err = _validate_and_convert()
     if err: return err
     try:
-        output_path = "static/humidity.png"
-        generate_humidity_chart(start_utc, end_utc, output_path, db_level=db_level)
-        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-            return jsonify({"error": "image not generated"}), 500
-        return send_file(output_path, mimetype="image/png")
+        return _send_generated_png(generate_humidity_chart, "humidity", start_utc, end_utc, db_level)
     except ValueError as e:
         print("[humidity] ValueError:", str(e))
         return jsonify({"error": str(e)}), 400
@@ -205,11 +222,7 @@ def pressure():
     start_utc, end_utc, db_level, err = _validate_and_convert()
     if err: return err
     try:
-        output_path = "static/pressure.png"
-        generate_pressure_chart(start_utc, end_utc, output_path, db_level=db_level)
-        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-            return jsonify({"error": "image not generated"}), 500
-        return send_file(output_path, mimetype="image/png")
+        return _send_generated_png(generate_pressure_chart, "pressure", start_utc, end_utc, db_level)
     except ValueError as e:
         print("[pressure] ValueError:", str(e))
         return jsonify({"error": str(e)}), 400
@@ -224,11 +237,7 @@ def rain():
     start_utc, end_utc, db_level, err = _validate_and_convert()
     if err: return err
     try:
-        output_path = "static/rain.png"
-        generate_rain_chart(start_utc, end_utc, output_path, db_level=db_level)
-        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-            return jsonify({"error": "image not generated"}), 500
-        return send_file(output_path, mimetype="image/png")
+        return _send_generated_png(generate_rain_chart, "rain", start_utc, end_utc, db_level)
     except ValueError as e:
         print("[rain] ValueError:", str(e))
         return jsonify({"error": str(e)}), 400

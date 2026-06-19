@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 # 使用你的配置
-INFLUXDB_URL = "http://localhost:8086"
-INFLUXDB_TOKEN = "ln7NNOLrHk8y8w0KjE3nzR_qEXQBLANoZJMFPdMxsznISkpR1hOZt_CaZ0juIYU7Fwjft34NrO7061koydqolg=="
+INFLUXDB_URL = "http://47.114.121.245:8086"
+INFLUXDB_TOKEN = "gYOZtC9oKJjoHkjIKMVxbeOuSoX2dsTfGvTKtaERmVN7b3FcecbqWAzJEyLb_uNSzRhFqpas9YcGzvgmajTjIA=="
 INFLUXDB_ORG = "USTC"
 
 def query_time_range(start=None, end=None, minutes=None,  verbose=False, \
